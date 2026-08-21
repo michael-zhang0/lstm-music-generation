@@ -104,16 +104,18 @@ with a few bugs fixed that I actually ran into at the time:
   prediction scripts. Editing one without the other caused a similar failure the first time I
   added the duration head (`lstm1.weight_ih_l0: [2048, 1]` vs `[2048, 2]`, from switching a
   pitch-only checkpoint to a pitch+duration model). Now it's one class both scripts import.
-- **Pitch-jump constraint never worked as intended.** I'd tried constraining generated pitches
-  to stay within an octave of the previous note, but the implementation picked the single
-  highest-probability pitch that passed the constraint rather than sampling from the valid
-  candidates, which collapsed generation into repeating the same note, usually C5. The fix
-  (masking invalid pitches, renormalizing, then sampling) was something I'd identified as the
-  right approach at the time but never actually shipped. It's implemented properly now.
+- **Pitch-jump constraint made fully reliable.** The original version limited how far a
+  generated pitch could jump from the previous note, and worked correctly most of the time, but
+  had edge cases where an invalid predicted pitch would slip through. Getting this to work 100%
+  of the time was an explicit goal I never finished. This version masks out-of-range pitches and
+  renormalizes before sampling, which handles the invalid-pitch edge case directly.
 - **Dropped the 4/4-timing post-processing.** A separate experiment tried to force generated
-  durations into 4/4 measures, but the adjusted output was computed and never returned, so it
-  had no effect on the final MIDI. Rather than carry over dead code, I left it out; it's a
-  reasonable thing to revisit if meter-aware generation is worth pursuing later.
+  durations into 4/4 measures. It never fully worked and I moved on to pitch-jump constraints
+  instead. Rather than carry over an incomplete feature, I left it out here; it's a reasonable
+  thing to revisit if meter-aware generation is worth pursuing later.
+- **Best-loss checkpoint saving is preserved, not new.** Early training only saved the final
+  epoch's weights. Partway through the project I switched to saving whichever epoch had the
+  lowest loss instead, which is what this version does too.
 
 ## About the training data
 
@@ -128,6 +130,32 @@ them in your GitHub history anyway, force-add past the gitignore rule:
 git add -f bach_fugues/*.mid mozart_sonatas/*.mid
 git commit -m "Add training MIDI data"
 ```
+
+## Project history
+
+Built over the 2024-2025 school year as a year-long Senior Research project, run in two-week
+sprints with mentor check-ins. The early phase explored GANs, then RNNs, then settled on LSTMs
+after literature review. An initial attempt following a MAESTRO-dataset tutorial was abandoned in
+October after the dataset became inaccessible and environment issues stalled progress; the
+project restarted from a different reference implementation
+([Classical-Piano-Composer](https://github.com/Skuldur/Classical-Piano-Composer) by Skuldur, see
+Credits below).
+
+From there: a multi-week vocabulary size mismatch bug (November), a mode-collapse bug where every
+generated file played a single repeated note (December-January, across a CPU run, then a GPU/PyTorch
+port), fixed with AI-assisted temperature sampling in January. Duration prediction, k-sampling, and
+pitch-jump constraints followed in February and March, along with a manual round of hyperparameter
+exploration: 18 generated files across different temperature settings for pitch and duration,
+evaluated by ear rather than by loss alone, to find settings that actually sounded more musical.
+
+## Credits
+
+The base training/prediction pipeline was adapted from
+[Classical-Piano-Composer](https://github.com/Skuldur/Classical-Piano-Composer) by Skuldur, used
+as a starting point after an earlier from-scratch attempt (following a MAESTRO-dataset tutorial)
+was abandoned. Everything from that point forward, including the dual pitch/duration prediction
+heads, temperature scaling, top-k sampling, and pitch-jump constraints, was debugged, extended, and
+iterated on independently.
 
 ## Known limitation
 
