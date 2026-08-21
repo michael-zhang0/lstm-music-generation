@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Training data and model weights
+# Excluded by default. Bach and Mozart's compositions are public domain,
+# but see the note in README.md before deciding whether to commit these
+# specific MIDI transcriptions.
+data/*.mid
+data/notes
+bach_fugues/*.mid
+mozart_sonatas/*.mid
+*.pth
+checkpoints/*.pth
+generated/*.mid
+
+# Keep placeholder files so empty dirs still get committed
+!checkpoints/.gitkeep
+!generated/.gitkeep
+
+# OS/editor
+.DS_Store
+.vscode/
